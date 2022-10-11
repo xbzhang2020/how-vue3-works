@@ -19,5 +19,8 @@
     "webpack-cli": "^4.10.0",
     "webpack-dev-server": "^4.9.3"
   },
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "vue": "^3.2.40"
+  }
 }
