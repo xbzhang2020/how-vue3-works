@@ -1,14 +1,16 @@
 import { ref, effect } from 'vue'
 
-function renderer(domString, container) {
-  container.innerHTML = domString
+/**
+ * 渲染器
+ */
+export class Renderer {
+  constructor() {}
+
+  render(vnode, container) {}
+
+  patch(n1, n2, container) {}
 }
 
-const count = ref(0)
-effect(() => {
-  renderer(`<p>count: ${count.value}</h1>`, document.getElementById('root'))
-})
-
-setTimeout(() => {
-  count.value++
-}, 1000)
+export function createRenderer() {
+  return new Renderer()
+}
