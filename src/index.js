@@ -6,4 +6,4 @@
 // import './reactivity/06-scheduler.js'
 
 // 渲染器
-import './renderer/index.js'
+import './renderer/02-base.js'
