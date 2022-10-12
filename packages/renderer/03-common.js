@@ -33,9 +33,9 @@ export class Renderer {
   mountElement(vnode, container) {
     const el = this.options.createElement(vnode.type)
     if (vnode.text) {
-      this.options.insert(el, container)
+      this.options.setElementText(el, vnode.text)
     }
-    container.appendChild(el)
+    this.options.insert(el, container)
   }
 }
 
