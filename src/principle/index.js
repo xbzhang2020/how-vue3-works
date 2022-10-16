@@ -9,4 +9,5 @@
 // 渲染器
 // import './packages/renderer/01-simple.js'
 // import './packages/renderer/02-base.js'
-import './packages/renderer/03-common.js'
+// import './packages/renderer/03-common.js'
+
