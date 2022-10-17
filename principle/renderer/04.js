@@ -19,21 +19,44 @@ export class Renderer {
   }
 
   patch(n1, n2, container) {
-    if (!n1) {
-      this.mount(n2, container)
-    } else {
-      // TODO: 更新 DOM
-      console.log('update')
+    if (n1 && n1.type !== n2.type) {
+      this.unmount(n1)
+      n1 = null
+    }
+    const { type } = n2
+
+    if (typeof type === 'string') {
+      if (!n1) {
+        this.mountElement(n2, container)
+      } else {
+        this.patchElement(n1, n2, container)
+      }
     }
   }
 
-  mount(vnode, container) {
+  patchElement(n1, n2, container) {
+    const el = (n2.el = n1.el)
+    const oldProps = n1.props
+    const newProps = n2.props
+
+    for (const key in newProps) {
+      this.options.patchProps(el, key, oldProps[key], newProps[key])
+    }
+
+    for (const key in oldProps) {
+      if (!(key in newProps)) {
+        this.options.patchProps(el, key, oldProps[key], null)
+      }
+    }
+  }
+
+  mountElement(vnode, container) {
     const el = (vnode.el = this.options.createElement(vnode.type))
     if (typeof vnode.children === 'string') {
       this.options.setElementText(el, vnode.children)
     } else if (Array.isArray(vnode.children)) {
       vnode.children.forEach((item) => {
-        this.mount(item, el)
+        this.patch(null, item, el)
       })
     }
 

@@ -1,6 +1,7 @@
 import { createRenderer, browserRendererOptions } from './04.js'
+import { ref, effect } from 'vue'
 
-function test() {
+function test1() {
   const vnode = {
     type: 'div',
     props: {
@@ -34,4 +35,33 @@ function test() {
   //   }, 2000)
 }
 
-test()
+function test2() {
+  const bol = ref(false)
+  const renderer = createRenderer(browserRendererOptions)
+
+  effect(() => {
+    const vnode = {
+      type: 'div',
+      props: bol.value
+        ? {
+            onClick: () => console.log('父元素 Clicked'),
+          }
+        : {},
+      children: [
+        {
+          type: 'p',
+          children: 'hello',
+          props: {
+            onClick: () => {
+              bol.value = true
+              console.log('子元素 Clicked')
+            },
+          },
+        },
+      ],
+    }
+    renderer.render(vnode, document.getElementById('root'))
+  })
+}
+
+test2()
