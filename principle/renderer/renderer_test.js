@@ -6,6 +6,9 @@ function test() {
     props: {
       id: 'foo',
       class: 'a b',
+      onClick: () => {
+        console.log('clicked')
+      },
     },
     children: [
       {
@@ -25,10 +28,10 @@ function test() {
     renderer.render(vnode, document.getElementById('root'))
   }, 1000)
 
-  // 第三次渲染：卸载
-  setTimeout(() => {
-    renderer.render(null, document.getElementById('root'))
-  }, 2000)
+  //   // 第三次渲染：卸载
+  //   setTimeout(() => {
+  //     renderer.render(null, document.getElementById('root'))
+  //   }, 2000)
 }
 
 test()

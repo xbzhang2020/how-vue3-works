@@ -77,16 +77,34 @@ export const browserRendererOptions = {
   },
   // 为元素设置属性
   patchProps(el, key, oldValue, newValue) {
+    if (/^on/.test(key)) {
+      const name = key.slice(2).toLowerCase()
+      let invoker = el._vei
+      if (!invoker) {
+        invoker = el._vei = (e) => {
+          invoker.value(e)
+        }
+        invoker.value = newValue
+        el.addEventListener(name, invoker)
+      } else {
+        invoker.value = newValue
+      }
+      return
+    }
+
     if (key === 'class') {
       el.className = newValue || ''
-    } else if (shouldSetAsProps(el, key)) {
+      return
+    }
+
+    if (shouldSetAsProps(el, key)) {
       if (typeof el[key] === 'boolean' && newValue === '') {
         el[key] = true
       } else {
         el[key] = newValue
       }
-    } else {
-      el.setAttribute(key, newValue)
+      return
     }
+    el.setAttribute(key, newValue)
   },
 }
