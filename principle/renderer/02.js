@@ -33,8 +33,8 @@ export class Renderer {
 
   mountElement(vnode, container) {
     const el = document.createElement(vnode.type)
-    if (vnode.text) {
-      el.innerHTML = vnode.text
+    if (typeof vnode.children === 'string') {
+      el.innerHTML = vnode.children
     }
     container.appendChild(el)
   }
@@ -43,29 +43,3 @@ export class Renderer {
 export function createRenderer() {
   return new Renderer()
 }
-
-function test1() {
-  // vnode 节点
-  const vnode = {
-    type: 'p',
-    text: 'hello',
-  }
-
-  // 渲染器
-  const renderer = createRenderer()
-
-  // 第一次渲染：挂载
-  renderer.render(vnode, document.getElementById('root'))
-
-  // 第二次渲染：更新
-  setTimeout(() => {
-    renderer.render(vnode, document.getElementById('root'))
-  }, 1000)
-
-  // 第三次渲染：卸载
-  setTimeout(() => {
-    renderer.render(null, document.getElementById('root'))
-  }, 2000)
-}
-
-test1()

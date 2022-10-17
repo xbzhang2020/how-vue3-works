@@ -1,5 +1,5 @@
 /**
- * 设置子节点和元素属性
+ * 通用渲染器渲染器：实现跨平台渲染
  */
 export class Renderer {
   constructor(options) {
@@ -31,8 +31,8 @@ export class Renderer {
 
   mountElement(vnode, container) {
     const el = this.options.createElement(vnode.type)
-    if (vnode.text) {
-      this.options.setElementText(el, vnode.text)
+    if (typeof vnode.children === 'string') {
+      this.options.setElementText(el, vnode.children)
     }
     this.options.insert(el, container)
   }
@@ -42,7 +42,7 @@ export function createRenderer(options) {
   return new Renderer(options)
 }
 
-const browserRendererOptions = {
+export const browserRendererOptions = {
   // 创建元素
   createElement(tag) {
     return document.createElement(tag)
@@ -56,29 +56,3 @@ const browserRendererOptions = {
     parent.insertBefore(el, anchor)
   },
 }
-
-function test1() {
-  // vnode 节点
-  const vnode = {
-    type: 'p',
-    text: 'hello',
-  }
-
-  // 渲染器
-  const renderer = createRenderer(browserRendererOptions)
-
-  // 第一次渲染：挂载
-  renderer.render(vnode, document.getElementById('root'))
-
-  // 第二次渲染：更新
-  setTimeout(() => {
-    renderer.render(vnode, document.getElementById('root'))
-  }, 1000)
-
-  // 第三次渲染：卸载
-  setTimeout(() => {
-    renderer.render(null, document.getElementById('root'))
-  }, 2000)
-}
-
-test1()
