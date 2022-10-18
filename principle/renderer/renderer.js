@@ -105,8 +105,14 @@ export const browserRendererOptions = {
       let invoker = el._vei
       if (!invoker) {
         invoker = el._vei = (e) => {
-          invoker.value(e)
+          if (e.timeStamp < invoker.attached) return
+          if (Array.isArray(invoker.value)) {
+            invoker.value.forEach((fn) => fn(e))
+          } else {
+            invoker.value(e)
+          }
         }
+        invoker.attached = performance.now()
         invoker.value = newValue
         el.addEventListener(name, invoker)
       } else {

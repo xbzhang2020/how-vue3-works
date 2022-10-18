@@ -1,4 +1,4 @@
-import { createRenderer, browserRendererOptions } from './04.js'
+import { createRenderer, browserRendererOptions } from './renderer.js'
 import { ref, effect } from 'vue'
 
 function test1() {
@@ -7,9 +7,7 @@ function test1() {
     props: {
       id: 'foo',
       class: 'a b',
-      onClick: () => {
-        console.log('clicked')
-      },
+      onClick: [() => console.log('1'), () => console.log('2')],
     },
     children: [
       {
@@ -64,4 +62,5 @@ function test2() {
   })
 }
 
+// test1()
 test2()
