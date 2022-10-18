@@ -48,6 +48,33 @@ export class Renderer {
         this.options.patchProps(el, key, oldProps[key], null)
       }
     }
+
+    this.patchChildren(n1, n2, container)
+  }
+
+  patchChildren(n1, n2, container) {
+    if (typeof n2.children === 'string') {
+      if (Array.isArray(n1.children)) {
+        n1.children.forEach((item) => this.unmount(item))
+      }
+      this.options.setElementText(container, n2.children)
+    } else if (Array.isArray(n2.children)) {
+      if (Array.isArray(n1.children)) {
+        // 核心 DIFF 算法
+        // 暂时先用简单粗暴的方式支持，保证功能可用
+        n1.children.forEach((item) => this.unmount(item))
+        n2.children.forEach((item) => this.patch(null, item, container))
+      } else {
+        this.options.setElementText(container, '')
+        n2.children.forEach((item) => this.patch(null, item, container))
+      }
+    } else {
+      if (Array.isArray(n1.children)) {
+        n1.children.forEach((item) => this.unmount(item))
+      } else if (typeof n1.children === 'string') {
+        this.options.setElementText(container, '')
+      }
+    }
   }
 
   mountElement(vnode, container) {
