@@ -1,7 +1,7 @@
 /**
- * 简单 DIFF 算法实现
+ * 渲染器
  */
-import type { CreateRendererOption, VNode } from './index.d'
+import type { CreateRendererOption, VNode } from './index'
 
 export class Renderer {
   options: CreateRendererOption
@@ -87,51 +87,12 @@ export class Renderer {
       this.options.setElementText(container, n2.children)
     } else if (Array.isArray(n2.children)) {
       if (Array.isArray(n1.children)) {
-        // 核心 DIFF 算法，先用暴力方法支持，确保功能可用
+        // 暴力更新方法，确保功能可用
+        // n1.children.forEach((item) => this.unmount(item))
+        // n2.children.forEach((item) => this.patch(null, item, container))
 
-        const newChildren = n2.children
-        const oldChildren = n1.children
-        let lastIndex = 0
-        for (let i = 0; i < newChildren.length; i++) {
-          let j = 0
-          for (j = 0; j < oldChildren.length; j++) {
-            if (newChildren[i].key === oldChildren[j].key) {
-              // 找到可复用的节点
-              this.patch(oldChildren[j], newChildren[i], container)
-
-              if(j < lastIndex) {
-                const prevVNode = newChildren[i - 1]
-                if(prevVNode) {
-                  const anchor = prevVNode.el.nextSibling as unknown as Element
-                  this.options.insert(newChildren[i].el, container, anchor)
-                }
-              } else {
-                lastIndex = j
-              } 
-              break
-            }
-          }
-
-          if (j >= oldChildren.length) {
-            // 在新的一组子节点中未找到可复用的节点，则说明需要新添节点
-            const prevVNode = newChildren[i - 1]
-            let anchor = null
-            if(prevVNode) {
-              anchor = prevVNode.el.nextSibling
-            } else {
-              anchor = container.firstChild
-            }
-            this.mountElement(newChildren[i], container, anchor)
-          }
-        }
-        
-        for(let i = 0; i < oldChildren.length; i++) {
-          const item = newChildren.find(newNode => oldChildren[i].key === newNode.key)
-          if(!item) {
-            // 在旧的一组子节点中，为找到key值相同的元素，说明需要卸载
-            this.unmount(oldChildren[i])
-          }
-        }
+        // 简单 diff 算法
+        this.simpleDiff(n1, n2, container)
       } else {
         this.options.setElementText(container, '')
         n2.children.forEach((item) => this.patch(null, item, container))
@@ -141,6 +102,52 @@ export class Renderer {
         n1.children.forEach((item) => this.unmount(item))
       } else if (typeof n1.children === 'string') {
         this.options.setElementText(container, '')
+      }
+    }
+  }
+
+  simpleDiff(n1: VNode, n2: VNode, container: Element) {
+    const newChildren = n2.children as VNode[]
+    const oldChildren = n1.children as VNode[]
+    let lastIndex = 0
+    for (let i = 0; i < newChildren.length; i++) {
+      let j = 0
+      for (j = 0; j < oldChildren.length; j++) {
+        if (newChildren[i].key === oldChildren[j].key) {
+          // 找到可复用的节点
+          this.patch(oldChildren[j], newChildren[i], container)
+
+          if (j < lastIndex) {
+            const prevVNode = newChildren[i - 1]
+            if (prevVNode) {
+              const anchor = prevVNode.el.nextSibling as unknown as Element
+              this.options.insert(newChildren[i].el, container, anchor)
+            }
+          } else {
+            lastIndex = j
+          }
+          break
+        }
+      }
+
+      if (j >= oldChildren.length) {
+        // 在新的一组子节点中未找到可复用的节点，则说明需要新添节点
+        const prevVNode = newChildren[i - 1]
+        let anchor = null
+        if (prevVNode) {
+          anchor = prevVNode.el.nextSibling
+        } else {
+          anchor = container.firstChild
+        }
+        this.mountElement(newChildren[i], container, anchor)
+      }
+    }
+
+    for (let i = 0; i < oldChildren.length; i++) {
+      const item = newChildren.find((newNode) => oldChildren[i].key === newNode.key)
+      if (!item) {
+        // 在旧的一组子节点中，为找到key值相同的元素，说明需要卸载
+        this.unmount(oldChildren[i])
       }
     }
   }

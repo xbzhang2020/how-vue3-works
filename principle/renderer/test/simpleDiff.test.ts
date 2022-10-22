@@ -1,4 +1,4 @@
-import { createRenderer } from '../simpleDiff'
+import { createRenderer } from '../renderer'
 import { browserRendererOptions } from '../rendererOptions'
 
 const vnode1 = {
