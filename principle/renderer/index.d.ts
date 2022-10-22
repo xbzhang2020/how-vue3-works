@@ -1,5 +1,5 @@
 export interface VNode {
-  key?: number | string
+  key: number | string
   type: string
   el?: Element
   props?: any
@@ -14,6 +14,3 @@ export interface CreateRendererOption {
   patchProps: (el: Element, key: string, oldValue: any, newValue: any) => void
 }
 
-interface Element {
-  _vnode?: VNode
-}
