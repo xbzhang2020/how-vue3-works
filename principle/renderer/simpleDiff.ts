@@ -1,11 +1,16 @@
-export class Renderer {
-  options: any
+/**
+ * 简单 DIFF 算法实现
+ */
+import type { CreateRendererOption, VNode, Element } from './index.d'
 
-  constructor(options) {
+export class Renderer {
+  options: CreateRendererOption
+
+  constructor(options: CreateRendererOption) {
     this.options = options
   }
 
-  render(vnode, container) {
+  render(vnode: VNode, container: Element) {
     if (vnode) {
       this.patch(container._vnode, vnode, container)
     } else {
@@ -17,7 +22,7 @@ export class Renderer {
     container._vnode = vnode
   }
 
-  patch(n1, n2, container) {
+  patch(n1: VNode | null, n2: VNode, container: Element) {
     if (n1 && n1.type !== n2.type) {
       this.unmount(n1)
       n1 = null
@@ -33,25 +38,48 @@ export class Renderer {
     }
   }
 
-  patchElement(n1, n2, container) {
+  mountElement(vnode: VNode, container: Element, anchor?: Element) {
+    const el = (vnode.el = this.options.createElement(vnode.type))
+
+    // 挂载属性
+    if (vnode.props) {
+      for (const key in vnode.props) {
+        this.options.patchProps(el, key, null, vnode.props[key])
+      }
+    }
+
+    // 挂载子节点
+    if (typeof vnode.children === 'string') {
+      this.options.setElementText(el, vnode.children)
+    } else if (Array.isArray(vnode.children)) {
+      vnode.children.forEach((item) => {
+        this.patch(null, item, el)
+      })
+    }
+
+    this.options.insert(el, container, anchor)
+  }
+
+  patchElement(n1: VNode, n2: VNode, container: Element) {
     const el = (n2.el = n1.el)
+
+    // 更新属性
     const oldProps = n1.props
     const newProps = n2.props
-
     for (const key in newProps) {
       this.options.patchProps(el, key, oldProps[key], newProps[key])
     }
-
     for (const key in oldProps) {
       if (!(key in newProps)) {
         this.options.patchProps(el, key, oldProps[key], null)
       }
     }
 
+    // 更新子节点
     this.patchChildren(n1, n2, container)
   }
 
-  patchChildren(n1, n2, container) {
+  patchChildren(n1: VNode, n2: VNode, container: Element) {
     if (typeof n2.children === 'string') {
       if (Array.isArray(n1.children)) {
         n1.children.forEach((item) => this.unmount(item))
@@ -59,8 +87,7 @@ export class Renderer {
       this.options.setElementText(container, n2.children)
     } else if (Array.isArray(n2.children)) {
       if (Array.isArray(n1.children)) {
-        // 核心 DIFF 算法
-        // 暂时先用简单粗暴的方式支持，保证功能可用
+        // 核心 DIFF 算法，先用暴力方法支持，确保功能可用
         n1.children.forEach((item) => this.unmount(item))
         n2.children.forEach((item) => this.patch(null, item, container))
       } else {
@@ -76,90 +103,12 @@ export class Renderer {
     }
   }
 
-  mountElement(vnode, container) {
-    const el = (vnode.el = this.options.createElement(vnode.type))
-    if (typeof vnode.children === 'string') {
-      this.options.setElementText(el, vnode.children)
-    } else if (Array.isArray(vnode.children)) {
-      vnode.children.forEach((item) => {
-        this.patch(null, item, el)
-      })
-    }
-
-    if (vnode.props) {
-      for (const key in vnode.props) {
-        this.options.patchProps(el, key, null, vnode.props[key])
-      }
-    }
-    this.options.insert(el, container)
-  }
-
-  unmount(vnode) {
-    const parent = vnode.el.parentNode
-    if (parent) {
-      parent.removeChild(vnode.el)
-    }
+  unmount(vnode: VNode) {
+    this.options.removeElement(vnode.el)
   }
 }
 
-export function createRenderer(options) {
+export function createRenderer(options: CreateRendererOption) {
   return new Renderer(options)
 }
 
-function shouldSetAsProps(el, key) {
-  if (key === 'form' && el.tagName === 'INPUT') return false
-  return key in el
-}
-
-export const browserRendererOptions = {
-  // 创建元素
-  createElement(tag) {
-    return document.createElement(tag)
-  },
-  // 设置元素的文本节点
-  setElementText(el, text) {
-    el.textContent = text
-  },
-  // 在指定容器上中插入元素
-  insert(el, parent, anchor = null) {
-    parent.insertBefore(el, anchor)
-  },
-  // 为元素设置属性
-  patchProps(el, key, oldValue, newValue) {
-    if (/^on/.test(key)) {
-      const name = key.slice(2).toLowerCase()
-      let invoker = el._vei
-      if (!invoker) {
-        invoker = el._vei = (e) => {
-          if (e.timeStamp < invoker.attached) return
-          if (Array.isArray(invoker.value)) {
-            invoker.value.forEach((fn) => fn(e))
-          } else {
-            invoker.value(e)
-          }
-        }
-        invoker.attached = performance.now()
-        invoker.value = newValue
-        el.addEventListener(name, invoker)
-      } else {
-        invoker.value = newValue
-      }
-      return
-    }
-
-    if (key === 'class') {
-      el.className = newValue || ''
-      return
-    }
-
-    if (shouldSetAsProps(el, key)) {
-      if (typeof el[key] === 'boolean' && newValue === '') {
-        el[key] = true
-      } else {
-        el[key] = newValue
-      }
-      return
-    }
-    el.setAttribute(key, newValue)
-  },
-}
