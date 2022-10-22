@@ -10,7 +10,7 @@ export class Renderer {
     this.options = options
   }
 
-  render(vnode: VNode, container: Element) {
+  render(vnode: VNode, container) {
     if (vnode) {
       this.patch(container._vnode, vnode, container)
     } else {

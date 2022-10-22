@@ -1,4 +1,4 @@
-import { createRenderer, browserRendererOptions } from './renderer.js'
+import { createRenderer, browserRendererOptions } from '../renderer.js'
 import { ref, effect } from 'vue'
 
 function test1() {

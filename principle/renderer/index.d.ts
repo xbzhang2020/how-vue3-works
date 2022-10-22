@@ -1,7 +1,8 @@
 export interface VNode {
+  key?: number | string
   type: string
-  el: Element
-  props: any
+  el?: Element
+  props?: any
   children: string | null | VNode[]
 }
 
@@ -14,5 +15,5 @@ export interface CreateRendererOption {
 }
 
 interface Element {
-  _vnode: VNode
+  _vnode?: VNode
 }
