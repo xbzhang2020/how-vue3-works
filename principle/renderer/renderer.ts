@@ -92,7 +92,10 @@ export class Renderer {
         // n2.children.forEach((item) => this.patch(null, item, container))
 
         // 简单 diff 算法
-        this.simpleDiff(n1, n2, container)
+        // this.simpleDiff(n1, n2, container)
+
+        // 双端 diff 算法
+        this.doubleEndDiff(n1, n2, container)
       } else {
         this.options.setElementText(container, '')
         n2.children.forEach((item) => this.patch(null, item, container))
@@ -116,7 +119,7 @@ export class Renderer {
         if (newChildren[i].key === oldChildren[j].key) {
           // 找到可复用的节点
           this.patch(oldChildren[j], newChildren[i], container)
-
+          // 更新元素的顺序
           if (j < lastIndex) {
             const prevVNode = newChildren[i - 1]
             if (prevVNode) {
@@ -148,6 +151,66 @@ export class Renderer {
       if (!item) {
         // 在旧的一组子节点中，为找到key值相同的元素，说明需要卸载
         this.unmount(oldChildren[i])
+      }
+    }
+  }
+
+  doubleEndDiff(n1: VNode, n2: VNode, container: Element) {
+    const newChildren = n2.children as VNode[]
+    const oldChildren = n1.children as VNode[]
+
+    let newStartIndex = 0
+    let newEndIndex = newChildren.length - 1
+    let oldStartIndex = 0
+    let oldEndIndex = oldChildren.length - 1
+
+    while (newStartIndex <= newEndIndex && oldStartIndex <= oldEndIndex) {
+      if (!oldChildren[oldStartIndex]) {
+        oldStartIndex++
+      } else if (!oldChildren[oldEndIndex]) {
+        oldEndIndex--
+      } else if (newChildren[newStartIndex].key === oldChildren[oldStartIndex].key) {
+        this.patch(oldChildren[oldStartIndex++], newChildren[newStartIndex++], container)
+      } else if (newChildren[newEndIndex].key === oldChildren[oldEndIndex].key) {
+        this.patch(oldChildren[oldEndIndex--], newChildren[oldEndIndex--], container)
+      } else if (newChildren[newEndIndex].key === oldChildren[oldStartIndex].key) {
+        this.patch(oldChildren[oldStartIndex], newChildren[newEndIndex], container)
+        const anchor = oldChildren[oldEndIndex].el.nextSibling as unknown as Element
+        this.options.insert(newChildren[newEndIndex].el, container, anchor)
+        oldStartIndex++
+        newEndIndex--
+      } else if (newChildren[newStartIndex].key === oldChildren[oldEndIndex].key) {
+        this.patch(oldChildren[oldEndIndex], newChildren[newStartIndex], container)
+        const anchor = oldChildren[oldStartIndex].el
+        this.options.insert(newChildren[newStartIndex].el, container, anchor)
+        newStartIndex++
+        oldEndIndex--
+      } else {
+        let oldIndex = oldChildren.findIndex((oldNode) => oldNode && newChildren[newStartIndex].key === oldNode.key)
+        if (oldIndex > 0) {
+          this.patch(oldChildren[oldIndex], newChildren[newStartIndex], container)
+          oldChildren[oldIndex] = undefined
+          const anchor = oldChildren[oldStartIndex].el
+          this.options.insert(newChildren[newStartIndex++].el, container, anchor)
+        } else {
+          const anchor = oldChildren[oldStartIndex].el
+          this.mountElement(newChildren[newStartIndex++], container, anchor)
+        }
+      }
+    }
+
+    if(newStartIndex <= oldEndIndex && oldStartIndex > oldEndIndex) {
+      for(let i = newStartIndex; i<= oldEndIndex; i++) {
+        const anchor = oldChildren[oldStartIndex].el
+        this.mountElement(newChildren[i], container, anchor)
+      }
+    }
+
+    if(oldStartIndex <= oldEndIndex && newStartIndex > newEndIndex) {
+      for(let i = oldStartIndex; i <= oldEndIndex; i++) {
+        if(oldChildren[i]) {
+          this.unmount(oldChildren[i])
+        }
       }
     }
   }
