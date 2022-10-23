@@ -129,8 +129,7 @@ export class Renderer {
     } else if (Array.isArray(n2.children)) {
       if (Array.isArray(n1.children)) {
         // 暴力更新方法，确保功能可用
-        // n1.children.forEach((item) => this.unmount(item))
-        // n2.children.forEach((item) => this.patch(null, item, container))
+        // this.noDiff(n1, n2, container)
 
         // 简单 diff 算法
         // this.simpleDiff(n1, n2, container)
@@ -151,6 +150,13 @@ export class Renderer {
         this.options.setElementText(container, '')
       }
     }
+  }
+
+  noDiff(n1: VNode, n2: VNode, container: Element) {
+    const newChildren = n2.children as VNode[]
+    const oldChildren = n1.children as VNode[]
+    oldChildren.forEach((item) => this.unmount(item))
+    newChildren.forEach((item) => this.mountElement(item, container))
   }
 
   simpleDiff(n1: VNode, n2: VNode, container: Element) {
@@ -216,7 +222,7 @@ export class Renderer {
       } else if (newChildren[newStartIndex].key === oldChildren[oldStartIndex].key) {
         this.patch(oldChildren[oldStartIndex++], newChildren[newStartIndex++], container)
       } else if (newChildren[newEndIndex].key === oldChildren[oldEndIndex].key) {
-        this.patch(oldChildren[oldEndIndex--], newChildren[oldEndIndex--], container)
+        this.patch(oldChildren[oldEndIndex--], newChildren[newEndIndex--], container)
       } else if (newChildren[newEndIndex].key === oldChildren[oldStartIndex].key) {
         this.patch(oldChildren[oldStartIndex], newChildren[newEndIndex], container)
         const anchor = oldChildren[oldEndIndex].el.nextSibling as unknown as Element
@@ -243,7 +249,6 @@ export class Renderer {
       }
     }
 
-    console.log(newStartIndex, newEndIndex, oldStartIndex, oldEndIndex)
     if (newStartIndex <= newEndIndex && oldStartIndex > oldEndIndex) {
       for (let i = newStartIndex; i <= newEndIndex; i++) {
         const anchor = oldChildren[oldStartIndex].el
@@ -339,24 +344,18 @@ export class Renderer {
     let s = seq.length - 1
     let i = count - 1
     for (; i > 0; i--) {
-      if (i != seq[s]) {
-        // 在最长子序列中找不到对应的索引，说明需要挂载元素或移动元素顺序
+      const newIndex = i + newStartIndex
+      const nextPos = newIndex + 1
+      const anchor = nextPos < newChildren.length ? (newChildren[nextPos].el as unknown as Element) : null
 
-        const newIndex = i + newStartIndex
-        const oldIndex = source[i]
-
-        // 获取新的一组子节点中下一位置的元素
-        const nextPos = newIndex + 1
-        const anchor = nextPos < newChildren.length ? (newChildren[nextPos].el as unknown as Element) : null
-
-        if (oldIndex == -1) {
-          // 没有对应的旧子节点索引，说明需要挂载元素
-          this.mountElement(newChildren[newIndex], container, anchor)
-        } else {
-          // 存在旧的子节点索引，说明需要移动元素
-          this.options.insert(newChildren[newIndex].el, container, anchor)
-        }
+      if (source[i] == -1) {
+        // 没有对应的旧子节点索引，说明需要挂载元素
+        this.mountElement(newChildren[newIndex], container, anchor)
+      } else if (i != seq[s]) {
+        // 在最长子序列中找不到对应的索引，说明移动元素顺序
+        this.options.insert(newChildren[newIndex].el, container, anchor)
       } else {
+        // 说说明不需要移动元素
         s--
       }
     }

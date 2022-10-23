@@ -1,1 +1,1 @@
-import './renderer/test/simpleDiff.test'
+import './renderer/test/renderer'
