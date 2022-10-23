@@ -3,6 +3,47 @@
  */
 import type { CreateRendererOption, VNode } from './index'
 
+function getSequence(arr: number[]) {
+  const p = arr.slice()
+  const result = [0]
+  let i, j, u, v, c
+  const len = arr.length
+  for (i = 0; i < len; i++) {
+    const arrI = arr[i]
+    if (arrI !== 0) {
+      j = result[result.length - 1]
+      if (arr[j] < arrI) {
+        p[i] = j
+        result.push(i)
+        continue
+      }
+      u = 0
+      v = result.length - 1
+      while (u < v) {
+        c = ((u + v) / 2) | 0
+        if (arr[result[c]] < arrI) {
+          u = c + 1
+        } else {
+          v = c
+        }
+      }
+      if (arrI < arr[result[u]]) {
+        if (u > 0) {
+          p[i] = result[u - 1]
+        }
+        result[u] = i
+      }
+    }
+  }
+  u = result.length
+  v = result[u - 1]
+  while (u-- > 0) {
+    result[u] = v
+    v = p[v]
+  }
+  return result
+}
+
 export class Renderer {
   options: CreateRendererOption
 
@@ -95,7 +136,10 @@ export class Renderer {
         // this.simpleDiff(n1, n2, container)
 
         // 双端 diff 算法
-        this.doubleEndDiff(n1, n2, container)
+        // this.doubleEndDiff(n1, n2, container)
+
+        // 快速 diff 算法
+        this.quickDiff(n1, n2, container)
       } else {
         this.options.setElementText(container, '')
         n2.children.forEach((item) => this.patch(null, item, container))
@@ -199,18 +243,121 @@ export class Renderer {
       }
     }
 
-    if(newStartIndex <= oldEndIndex && oldStartIndex > oldEndIndex) {
-      for(let i = newStartIndex; i<= oldEndIndex; i++) {
+    console.log(newStartIndex, newEndIndex, oldStartIndex, oldEndIndex)
+    if (newStartIndex <= newEndIndex && oldStartIndex > oldEndIndex) {
+      for (let i = newStartIndex; i <= newEndIndex; i++) {
         const anchor = oldChildren[oldStartIndex].el
         this.mountElement(newChildren[i], container, anchor)
       }
     }
 
-    if(oldStartIndex <= oldEndIndex && newStartIndex > newEndIndex) {
-      for(let i = oldStartIndex; i <= oldEndIndex; i++) {
-        if(oldChildren[i]) {
+    if (oldStartIndex <= oldEndIndex && newStartIndex > newEndIndex) {
+      for (let i = oldStartIndex; i <= oldEndIndex; i++) {
+        if (oldChildren[i]) {
           this.unmount(oldChildren[i])
         }
+      }
+    }
+  }
+
+  quickDiff(n1: VNode, n2: VNode, container: Element) {
+    const newChildren = n2.children as VNode[]
+    const oldChildren = n1.children as VNode[]
+
+    let newStartIndex = 0
+    let newEndIndex = newChildren.length - 1
+    let oldEndIndex = oldChildren.length - 1
+
+    // 预处理前置节点
+    while (
+      newChildren[newStartIndex] &&
+      oldChildren[newStartIndex] &&
+      newChildren[newStartIndex].key === oldChildren[newStartIndex].key
+    ) {
+      this.patch(oldChildren[newStartIndex], newChildren[newStartIndex], container)
+      newStartIndex++
+    }
+
+    // 刚好全部更新完毕，直接返回
+    if (newStartIndex > newEndIndex && newStartIndex > oldEndIndex) {
+      return
+    }
+
+    // 预处理后置节点
+    while (
+      newChildren[newEndIndex] &&
+      oldChildren[oldEndIndex] &&
+      newChildren[newEndIndex].key === oldChildren[oldEndIndex].key
+    ) {
+      this.patch(oldChildren[oldEndIndex], newChildren[newEndIndex], container)
+      newEndIndex--
+      oldEndIndex--
+    }
+
+    // 如果只有新的一组子节点有剩余
+    if (newStartIndex <= newEndIndex && newStartIndex > oldEndIndex) {
+      for (let i = newStartIndex; i <= newEndIndex; i++) {
+        const anchor = oldChildren[newStartIndex].el
+        this.mountElement(newChildren[i], container, anchor)
+      }
+      return
+    }
+
+    // 如果只有旧的一组子节点有剩余
+    if (newStartIndex <= oldEndIndex && newStartIndex > newEndIndex) {
+      for (let i = newStartIndex; i <= oldEndIndex; i++) {
+        this.unmount(oldChildren[i])
+      }
+      return
+    }
+
+    // 新旧两组子节点都有剩余，先记录索引对应关系
+    const count = newEndIndex - newStartIndex + 1 // 剩余未更新的子节点数量
+    const source = new Array(count)
+    source.fill(-1)
+    const keyIndex = {}
+    // 先遍历新的一组子节点，记录 key 值的 索引表
+    for (let i = newStartIndex; i <= newEndIndex; i++) {
+      keyIndex[newChildren[i].key] = i
+    }
+    // 遍历旧的一组子节点，记录相同key值时，新的一组子节点的位置和旧的一组子节点的位置
+    for (let i = newStartIndex; i <= oldEndIndex; i++) {
+      const newIndex = keyIndex[oldChildren[i].key]
+      if (newIndex) {
+        // 可复用
+        this.patch(oldChildren[i], newChildren[newIndex], container)
+        source[newIndex - newStartIndex] = i
+      } else {
+        this.unmount(oldChildren[i])
+      }
+    }
+
+    // 计算最长递增子序列
+    const seq = getSequence(source)
+
+    // 移动或挂载元素
+    let s = seq.length - 1
+    let i = count - 1
+    for (; i > 0; i--) {
+      if (i != seq[s]) {
+        // 在最长子序列中找不到对应的索引，说明需要挂载元素或移动元素顺序
+
+        const newIndex = i + newStartIndex
+        const oldIndex = source[i]
+
+        // 获取新的一组子节点中下一位置的元素
+        const nextPos = newIndex + 1
+        const anchor = nextPos < newChildren.length ? (newChildren[nextPos].el as unknown as Element) : null
+
+        if (oldIndex == -1) {
+          // 没有对应的旧子节点索引，说明需要挂载元素
+          this.mountElement(newChildren[newIndex], container, anchor)
+        } else {
+          // 存在旧的子节点索引，说明需要移动元素
+          this.options.insert(newChildren[newIndex].el, container, anchor)
+        }
+      } else {
+        s--
       }
     }
   }
